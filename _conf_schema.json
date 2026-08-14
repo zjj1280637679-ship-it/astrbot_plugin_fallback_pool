@@ -1,0 +1,98 @@
+{
+  "enabled": {
+    "description": "启用智能回退模型池",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后插件仍可读取历史状态和使用管理指令，但不会修改模型轮换顺序。"
+  },
+  "penalty": {
+    "description": "动态降权策略",
+    "type": "object",
+    "items": {
+      "burst_window_minutes": {
+        "description": "突发故障观察窗口（分钟）",
+        "type": "float",
+        "default": 10.0,
+        "hint": "默认在十分钟内统计是否形成故障簇。"
+      },
+      "burst_to_bottom_count": {
+        "description": "窗口内直接置底的失败次数",
+        "type": "int",
+        "default": 5,
+        "hint": "达到该次数后仅置于模型池末尾，不会从模型池删除。"
+      },
+      "ambiguous_global_share": {
+        "description": "模糊故障分配给模型全局状态的证据比例",
+        "type": "float",
+        "default": 0.65,
+        "hint": "其余比例只作用于当前请求负载桶，用于同时表达“API 异常”和“上下文吃撑”两种可能。取值 0 到 1。"
+      }
+    }
+  },
+  "recovery": {
+    "description": "信任恢复策略",
+    "type": "object",
+    "items": {
+      "half_life_minutes": {
+        "description": "失败证据半衰期（分钟）",
+        "type": "float",
+        "default": 30.0,
+        "hint": "没有新故障时，失败证据会按指数衰减并最终恢复原始顺序。"
+      },
+      "success_retention_ratio": {
+        "description": "一次成功后保留的历史失败证据比例",
+        "type": "float",
+        "default": 0.65,
+        "hint": "越小表示成功调用后恢复信任越快。取值 0 到 1。"
+      }
+    }
+  },
+  "hard_disable": {
+    "description": "确定性额度错误处理",
+    "type": "object",
+    "items": {
+      "enabled": {
+        "description": "明确额度耗尽时临时禁用模型",
+        "type": "bool",
+        "default": true
+      },
+      "quota_disable_hours": {
+        "description": "普通额度耗尽暂停时长（小时）",
+        "type": "float",
+        "default": 12.0
+      },
+      "daily_quota_disable_hours": {
+        "description": "每日额度耗尽暂停时长（小时）",
+        "type": "float",
+        "default": 24.0
+      }
+    }
+  },
+  "diagnostics": {
+    "description": "诊断与存储",
+    "type": "object",
+    "items": {
+      "log_reordering": {
+        "description": "在日志中记录模型池重排",
+        "type": "bool",
+        "default": true
+      },
+      "store_error_summary": {
+        "description": "在状态账本中保存脱敏后的短错误摘要",
+        "type": "bool",
+        "default": true,
+        "hint": "插件会尝试清除 API Key、Bearer Token 等敏感字段；关闭后只保存错误类别。"
+      },
+      "save_debounce_seconds": {
+        "description": "状态保存合并延迟（秒）",
+        "type": "float",
+        "default": 0.5
+      },
+      "max_events_per_model": {
+        "description": "每个模型最多保留的证据事件数",
+        "type": "int",
+        "default": 200
+      }
+    }
+  }
+}

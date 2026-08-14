@@ -1,0 +1,8 @@
+name: astrbot_plugin_fallback_pool
+display_name: 智能回退模型池
+desc: 基于近期失败证据、突发密度、时间衰减和成功恢复，动态调整 AstrBot 回退模型池的调用顺序；明确额度耗尽时可临时硬暂停模型。
+short_desc: 动态降权并自动恢复 AstrBot 回退模型顺序。
+version: v0.1.0
+author: zjj1280637679-ship-it
+repo: https://github.com/zjj1280637679-ship-it/astrbot_plugin_fallback_pool
+astrbot_version: ">=4.27,<5"
