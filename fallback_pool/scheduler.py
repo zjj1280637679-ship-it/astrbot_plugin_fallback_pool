@@ -55,10 +55,9 @@ class AdaptiveScheduler:
             self.ledger.ensure_record(identity)
             unique.append((item, identity))
 
-        pool_size = len(unique)
-        active: list[RankedCandidate] = []
+        available: list[tuple[Any, CandidateIdentity]] = []
         disabled: list[DisabledCandidate] = []
-        for base_index, (item, identity) in enumerate(unique):
+        for item, identity in unique:
             is_disabled, reason, disabled_until, manual = self.ledger.disabled_state(
                 identity.key,
                 now=now,
@@ -73,8 +72,15 @@ class AdaptiveScheduler:
                         manual=manual,
                     )
                 )
-                continue
+            else:
+                available.append((item, identity))
 
+        # Rank within the currently selectable pool. Disabled candidates are not
+        # ghost positions: if the model immediately behind A is disabled, one
+        # failure on A should still move it behind the next available model.
+        pool_size = len(available)
+        active: list[RankedCandidate] = []
+        for base_index, (item, identity) in enumerate(available):
             evidence = self.ledger.evidence(identity.key, bucket, now=now)
             recent_failures = self.ledger.recent_failure_count(
                 identity.key,

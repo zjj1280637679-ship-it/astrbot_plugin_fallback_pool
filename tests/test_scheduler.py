@@ -189,3 +189,76 @@ def test_hard_disabled_candidate_is_removed_until_expiry(tmp_path: Path) -> None
         now=5000,
     )
     assert {item.item.name for item in after_expiry.active} == {"A", "B"}
+
+
+def test_success_in_another_bucket_preserves_local_failure_evidence(
+    tmp_path: Path,
+) -> None:
+    ledger = make_ledger(tmp_path / "ledger.json")
+    candidate = Candidate("A")
+    candidate_identity = identity(candidate)
+    ledger.record_failure(
+        candidate_identity,
+        transient_signal(global_share=0.65),
+        ContextBucket.HUGE,
+        now=1000,
+    )
+
+    ledger.record_success(
+        candidate_identity,
+        ContextBucket.SMALL,
+        now=1000,
+    )
+
+    assert round(ledger.global_evidence(candidate_identity.key, now=1000), 4) == 0.4225
+    assert (
+        round(
+            ledger.bucket_evidence(
+                candidate_identity.key,
+                ContextBucket.HUGE,
+                now=1000,
+            ),
+            4,
+        )
+        == 0.35
+    )
+    assert (
+        round(
+            ledger.bucket_evidence(
+                candidate_identity.key,
+                ContextBucket.SMALL,
+                now=1000,
+            ),
+            4,
+        )
+        == 0.0
+    )
+
+
+def test_shift_is_measured_within_currently_available_pool(tmp_path: Path) -> None:
+    ledger = make_ledger(tmp_path / "ledger.json")
+    scheduler = AdaptiveScheduler(ledger)
+    candidates = [Candidate("A"), Candidate("B"), Candidate("C")]
+    for candidate in candidates:
+        ledger.ensure_record(identity(candidate))
+    ledger.manual_disable(
+        [identity(candidates[1]).key],
+        minutes=60,
+        now=1000,
+    )
+    ledger.record_failure(
+        identity(candidates[0]),
+        transient_signal(),
+        ContextBucket.SMALL,
+        now=1000,
+    )
+
+    ranking = scheduler.rank(
+        candidates,
+        identity,
+        ContextBucket.SMALL,
+        now=1000,
+    )
+
+    assert [item.item.name for item in ranking.active] == ["C", "A"]
+    assert [item.item.name for item in ranking.disabled] == ["B"]

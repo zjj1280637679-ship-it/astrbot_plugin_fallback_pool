@@ -125,16 +125,44 @@ class TrustLedger:
             record.last_success_at = now
 
             # A success is direct counter-evidence. It cannot create a positive
-            # "credit balance" that masks future failures; it only shrinks
-            # evidence that already exists and contributes to this request.
+            # "credit balance" that masks future failures; it only shrinks the
+            # evidence components that this success actually challenges. A small
+            # request succeeding reduces global suspicion, but must not erase the
+            # local evidence that a huge-context request shape is problematic.
             for event in record.events:
-                contributes_globally = event.global_share > 0
-                contributes_locally = event.bucket == bucket.value
-                if contributes_globally or contributes_locally:
-                    event.severity *= self.success_retention_ratio
+                self._apply_success_to_event(event, bucket)
 
             self._prune_record(record, now)
             self._dirty = True
+
+    def _apply_success_to_event(
+        self,
+        event: EvidenceEvent,
+        bucket: ContextBucket,
+    ) -> None:
+        retention = self.success_retention_ratio
+        if event.bucket == bucket.value:
+            # The success contradicts both the global and request-local
+            # hypotheses represented by this event.
+            event.severity *= retention
+            return
+
+        global_share = min(1.0, max(0.0, event.global_share))
+        if global_share <= 0:
+            return
+
+        # Only the global component is challenged. Re-encode the two absolute
+        # components back into (severity, global_share) without shrinking the
+        # event's local component for its original bucket.
+        global_component = event.severity * global_share * retention
+        local_component = event.severity * (1.0 - global_share)
+        combined = global_component + local_component
+        if combined <= 0:
+            event.severity = 0.0
+            event.global_share = 0.0
+            return
+        event.severity = combined
+        event.global_share = global_component / combined
 
     def evidence(
         self,
