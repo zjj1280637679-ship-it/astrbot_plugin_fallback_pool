@@ -55,13 +55,11 @@ class RunnerPatch:
         self.runner_cls = runner_cls
         self.llm_response_cls = llm_response_cls
 
-        previous_reset = _unwrap_our_patch(getattr(runner_cls, "reset"))
+        previous_reset = _unwrap_our_patch(runner_cls.reset)
         previous_fallback = _unwrap_our_patch(
-            getattr(runner_cls, "_iter_llm_responses_with_fallback")
+            runner_cls._iter_llm_responses_with_fallback
         )
-        previous_single = _unwrap_our_patch(
-            getattr(runner_cls, "_iter_llm_responses")
-        )
+        previous_single = _unwrap_our_patch(runner_cls._iter_llm_responses)
         self._previous_reset = previous_reset
         self._previous_fallback = previous_fallback
         self._previous_single = previous_single
@@ -216,9 +214,9 @@ class RunnerPatch:
         _mark_wrapper(patched_reset, previous_reset)
         _mark_wrapper(patched_fallback, previous_fallback)
         _mark_wrapper(patched_single, previous_single)
-        setattr(runner_cls, "reset", patched_reset)
-        setattr(runner_cls, "_iter_llm_responses_with_fallback", patched_fallback)
-        setattr(runner_cls, "_iter_llm_responses", patched_single)
+        runner_cls.reset = patched_reset
+        runner_cls._iter_llm_responses_with_fallback = patched_fallback
+        runner_cls._iter_llm_responses = patched_single
         self._installed_reset = patched_reset
         self._installed_fallback = patched_fallback
         self._installed_single = patched_single
@@ -242,13 +240,9 @@ class RunnerPatch:
         if not owns_patch:
             self.installed = False
             return
-        setattr(runner_cls, "reset", self._previous_reset)
-        setattr(
-            runner_cls,
-            "_iter_llm_responses_with_fallback",
-            self._previous_fallback,
-        )
-        setattr(runner_cls, "_iter_llm_responses", self._previous_single)
+        runner_cls.reset = self._previous_reset
+        runner_cls._iter_llm_responses_with_fallback = self._previous_fallback
+        runner_cls._iter_llm_responses = self._previous_single
         try:
             delattr(runner_cls, _PATCH_TOKEN_ATTR)
         except AttributeError:
@@ -268,7 +262,7 @@ class RunnerPatch:
                 "AstrBot ToolLoopAgentRunner is incompatible; missing: "
                 + ", ".join(missing)
             )
-        signature = inspect.signature(getattr(runner_cls, "_iter_llm_responses"))
+        signature = inspect.signature(runner_cls._iter_llm_responses)
         if "include_model" not in signature.parameters:
             raise RuntimeError(
                 "AstrBot ToolLoopAgentRunner is incompatible; "

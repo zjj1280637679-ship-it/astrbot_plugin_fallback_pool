@@ -6,9 +6,14 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any
 
-from .domain import CandidateIdentity, ContextBucket, ErrorSignal, EvidenceEvent, ModelRecord
+from .domain import (
+    CandidateIdentity,
+    ContextBucket,
+    ErrorSignal,
+    EvidenceEvent,
+    ModelRecord,
+)
 
 _SCHEMA_VERSION = 1
 
